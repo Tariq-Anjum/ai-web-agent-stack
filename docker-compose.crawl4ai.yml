@@ -1,0 +1,36 @@
+# Add these service blocks into your existing SearXNG docker-compose.yml,
+# under the top-level `services:` key. Don't run this file standalone unless
+# you don't have a compose file yet — then just rename this to docker-compose.yml
+# and add your searxng service into it the same way.
+
+services:
+  crawl4ai:
+    image: unclecode/crawl4ai:latest
+    container_name: crawl4ai
+    restart: unless-stopped
+    shm_size: 2g
+    ports:
+      - "11235:11235"
+    environment:
+      - MAX_CONCURRENT_TASKS=4
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  steel-browser:
+    image: ghcr.io/steel-dev/steel-browser:latest
+    container_name: steel-browser
+    restart: unless-stopped
+    shm_size: 2g
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    environment:
+      - HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
