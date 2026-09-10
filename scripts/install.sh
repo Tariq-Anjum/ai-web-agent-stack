@@ -101,9 +101,6 @@ ln -sfn "$ROOT/bin/web-search" "$HOME/.local/bin/web-search"
 # Ensure the key is exported for this process and descendants.
 source "$KEY_FILE"
 
-docker network inspect web-stack >/dev/null 2>&1 ||
-  docker network create web-stack >/dev/null
-
 docker compose \
   --env-file "$ROOT/.env" \
   -f "$ROOT/compose/docker-compose.yml" \
