@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SEARXNG_URL="${SEARXNG_URL:-http://127.0.0.1:8080}"
+SEARXNG_URL="${SEARXNG_URL%/}"
+
+limit="${WEB_SEARCH_LIMIT:-5}"
+category="${WEB_SEARCH_CATEGORY:-general}"
+snippet_chars="${WEB_SEARCH_SNIPPET_CHARS:-300}"
+include_snippets=true
+mode="pretty"
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  web-search [OPTIONS] QUERY
+
+Options:
+  -n NUMBER          Maximum number of results; default: 5
+  -c CATEGORY        SearXNG category; default: general
+  -s CHARACTERS      Maximum snippet length; default: 300
+  --no-snippets      Exclude snippets
+  --urls             Print URLs only
+  --compact          Print compact JSON
+  -h, --help         Show help
+
+Environment:
+  SEARXNG_URL
+  WEB_SEARCH_LIMIT
+  WEB_SEARCH_CATEGORY
+  WEB_SEARCH_SNIPPET_CHARS
+USAGE
+}
+
+query_parts=()
+
+while (($#)); do
+  case "$1" in
+    -n)
+      [[ $# -ge 2 ]] || { echo "Missing value after -n." >&2; exit 2; }
+      limit="$2"
+      shift 2
+      ;;
+    -c)
+      [[ $# -ge 2 ]] || { echo "Missing value after -c." >&2; exit 2; }
+      category="$2"
+      shift 2
+      ;;
+    -s)
+      [[ $# -ge 2 ]] || { echo "Missing value after -s." >&2; exit 2; }
+      snippet_chars="$2"
+      shift 2
+      ;;
+    --no-snippets)
+      include_snippets=false
+      shift
+      ;;
+    --urls)
+      mode="urls"
+      shift
+      ;;
+    --compact)
+      mode="compact"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      query_parts+=("$@")
+      break
+      ;;
+    -*)
+      printf 'Unknown option: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      query_parts+=("$1")
+      shift
+      ;;
+  esac
+done
+
+[[ "$limit" =~ ^[1-9][0-9]*$ ]] || {
+  echo "Result limit must be a positive integer." >&2
+  exit 2
+}
+
+(( limit <= 50 )) || {
+  echo "Result limit cannot exceed 50." >&2
+  exit 2
+}
+
+[[ "$snippet_chars" =~ ^[0-9]+$ ]] || {
+  echo "Snippet length must be a non-negative integer." >&2
+  exit 2
+}
+
+(( snippet_chars <= 5000 )) || {
+  echo "Snippet length cannot exceed 5000." >&2
+  exit 2
+}
+
+((${#query_parts[@]} > 0)) || {
+  usage >&2
+  exit 2
+}
+
+query="${query_parts[*]}"
+
+response="$(
+  curl -fsS \
+    --max-time 30 \
+    --get \
+    --data-urlencode "q=$query" \
+    --data-urlencode 'format=json' \
+    --data-urlencode "categories=$category" \
+    "$SEARXNG_URL/search"
+)"
+
+if [[ "$mode" == "urls" ]]; then
+  jq -r \
+    --argjson limit "$limit" \
+    '.results[:$limit][] | .url' <<<"$response"
+  exit 0
+fi
+
+jq_filter='
+  .results[:$limit]
+  | to_entries
+  | map(
+      {
+        rank: (.key + 1),
+        title: (.value.title // ""),
+        url: (.value.url // "")
+      }
+      +
+      (
+        if $include_snippets then
+          {
+            snippet:
+              (
+                (.value.content // "")
+                | if length > $snippet_chars
+                  then .[:$snippet_chars] + "…"
+                  else .
+                  end
+              )
+          }
+        else
+          {}
+        end
+      )
+    )
+'
+
+if [[ "$mode" == "compact" ]]; then
+  jq -c \
+    --argjson limit "$limit" \
+    --argjson snippet_chars "$snippet_chars" \
+    --argjson include_snippets "$include_snippets" \
+    "$jq_filter" <<<"$response"
+else
+  jq \
+    --argjson limit "$limit" \
+    --argjson snippet_chars "$snippet_chars" \
+    --argjson include_snippets "$include_snippets" \
+    "$jq_filter" <<<"$response"
+fi

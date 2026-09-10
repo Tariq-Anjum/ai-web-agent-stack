@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${WEB_STACK_HOME:-$(cd -- "$SCRIPT_DIR/.." && pwd)}"
+COMPOSE_FILE="$ROOT/compose/docker-compose.yml"
+ENV_FILE="$ROOT/.env"
+NETWORK="web-stack"
+
+# Optional compatibility: if this repository is used with the historical
+# /mnt/MD path, the caller can export WEB_STACK_HOME explicitly.
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+  printf 'Missing compose file: %s\n' "$COMPOSE_FILE" >&2
+  exit 1
+fi
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  printf 'Missing environment file: %s\n' "$ENV_FILE" >&2
+  printf 'Run ./scripts/install.sh first.\n' >&2
+  exit 1
+fi
+
+set -a
+source "$ENV_FILE"
+set +a
+
+: "${CRAWL4AI_API_TOKEN:?Missing CRAWL4AI_API_TOKEN in $ENV_FILE}"
+CRAWL4AI_PORT="${CRAWL4AI_PORT:-11235}"
+SEARXNG_PORT="${SEARXNG_PORT:-8080}"
+
+dc() {
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+}
+
+ensure_network() {
+  docker network inspect "$NETWORK" >/dev/null 2>&1 ||
+    docker network create "$NETWORK" >/dev/null
+}
+
+crawl4ai_curl() {
+  command curl -fsS \
+    --max-time "${CURL_TIMEOUT:-15}" \
+    -H "Authorization: Bearer ${CRAWL4AI_API_TOKEN}" \
+    "$@"
+}
+
+wait_for_crawl4ai() {
+  local base_url="http://127.0.0.1:${CRAWL4AI_PORT}"
+  local status
+
+  printf 'Waiting for Crawl4AI'
+
+  for _ in $(seq 1 60); do
+    status="$(
+      crawl4ai_curl \
+        --output /dev/null \
+        --write-out '%{http_code}' \
+        "$base_url/health" 2>/dev/null || true
+    )"
+
+    case "$status" in
+      200|204)
+        printf '\nCrawl4AI is responding at %s/health\n' "$base_url"
+        return 0
+        ;;
+    esac
+
+    printf '.'
+    sleep 2
+  done
+
+  printf '\nCrawl4AI did not become ready in time.\n' >&2
+  dc logs --tail=150 crawl4ai >&2
+  return 1
+}
+
+verify_searxng() {
+  curl -fsS \
+    --max-time 15 \
+    --get \
+    --data-urlencode 'q=web stack verification' \
+    --data-urlencode 'format=json' \
+    "http://127.0.0.1:${SEARXNG_PORT}/search" |
+    jq '{
+      query,
+      result_count: (.results | length)
+    }'
+}
+
+verify_crawl4ai() {
+  crawl4ai_curl \
+    "http://127.0.0.1:${CRAWL4AI_PORT}/health" |
+    jq .
+
+  crawl4ai_curl \
+    "http://127.0.0.1:${CRAWL4AI_PORT}/openapi.json" |
+    jq -e '.openapi and .paths' >/dev/null
+
+  echo "Authenticated Crawl4AI OpenAPI: OK"
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: web-stack COMMAND
+
+Commands:
+  up       Create the network and start SearXNG + Crawl4AI
+  down     Stop the stack
+  restart  Restart the stack
+  status   Show services, network membership and endpoints
+  logs     Follow Crawl4AI logs
+  logs-search  Follow SearXNG logs
+  verify   Test SearXNG, Crawl4AI and authenticated API access
+USAGE
+}
+
+command_name="${1:-status}"
+
+case "$command_name" in
+  up)
+    ensure_network
+    dc up -d
+    wait_for_crawl4ai
+    ;;
+
+  down)
+    dc down
+    ;;
+
+  restart)
+    ensure_network
+    dc restart
+    wait_for_crawl4ai
+    ;;
+
+  status)
+    ensure_network
+    printf '%s\n' '--- Compose services ---'
+    dc ps
+
+    printf '\n%s\n' '--- Shared network members ---'
+    docker network inspect "$NETWORK" \
+      --format '{{range $id, $container := .Containers}}{{$container.Name}}{{"\n"}}{{end}}' |
+      sort
+
+    printf '\n%s\n' '--- Host endpoints ---'
+    printf '%s\n' \
+      "SearXNG:  http://127.0.0.1:${SEARXNG_PORT}" \
+      "Crawl4AI: http://127.0.0.1:${CRAWL4AI_PORT}"
+
+    printf '\n%s\n' '--- Docker-network endpoints ---'
+    printf '%s\n' \
+      'SearXNG:  http://searxng:8080' \
+      'Crawl4AI: http://crawl4ai:11235'
+    ;;
+
+  logs)
+    dc logs -f --tail=150 crawl4ai
+    ;;
+
+  logs-search)
+    dc logs -f --tail=150 searxng
+    ;;
+
+  verify)
+    printf '%s\n' '--- SearXNG ---'
+    verify_searxng
+
+    printf '\n%s\n' '--- Crawl4AI ---'
+    verify_crawl4ai
+
+    printf '\n%s\n' '--- Docker-network path ---'
+    docker exec crawl4ai \
+      curl -fsS \
+      --max-time 15 \
+      --get \
+      --data-urlencode 'q=network verification' \
+      --data-urlencode 'format=json' \
+      'http://searxng:8080/search' |
+      jq '{query, result_count: (.results | length)}'
+    ;;
+
+  -h|--help|help)
+    usage
+    ;;
+
+  *)
+    printf 'Unknown command: %s\n\n' "$command_name" >&2
+    usage >&2
+    exit 2
+    ;;
+esac

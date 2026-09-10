@@ -1,0 +1,42 @@
+name: ai-web-agent-stack
+
+services:
+  searxng:
+    image: "docker.io/searxng/searxng:${SEARXNG_VERSION:?Set SEARXNG_VERSION}"
+    container_name: searxng
+    restart: unless-stopped
+    init: true
+    environment:
+      SEARXNG_HOST: "0.0.0.0"
+      SEARXNG_PORT: "8080"
+      SEARXNG_SECRET: "${SEARXNG_SECRET:?Set SEARXNG_SECRET}"
+      SEARXNG_LIMITER: "false"
+      SEARXNG_IMAGE_PROXY: "false"
+    ports:
+      - "127.0.0.1:${SEARXNG_PORT:-8080}:8080"
+    volumes:
+      - ../config/searxng:/etc/searxng
+      - ../data/searxng:/var/cache/searxng
+    networks:
+      - web-stack
+
+  crawl4ai:
+    image: "${CRAWL4AI_IMAGE:?Set CRAWL4AI_IMAGE}"
+    container_name: crawl4ai
+    restart: unless-stopped
+    init: true
+    shm_size: "1gb"
+    stop_grace_period: 30s
+    environment:
+      MAX_CONCURRENT_TASKS: "${CRAWL4AI_CONCURRENCY:-2}"
+      CRAWL4AI_API_TOKEN: "${CRAWL4AI_API_TOKEN:?Set CRAWL4AI_API_TOKEN}"
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?Set REDIS_PASSWORD}"
+    ports:
+      - "127.0.0.1:${CRAWL4AI_PORT:-11235}:11235"
+    networks:
+      - web-stack
+
+networks:
+  web-stack:
+    name: web-stack

@@ -1,205 +1,191 @@
-# Open-Source Web Agent Stack — Research Review + Implementation
+# AI Web Agent Stack
 
-Goal: one local, 100% open-source, low-resource stack that gives any AI agent/harness on your
-machine (Claude Code, pi coding agent, Hermes Agent, Claude Desktop/Cowork, etc.) the ability to
-search, browse, fill forms, extract clean research content, use vision only when needed, and
-push through bot-detection only as a last resort — all with minimal tokens per tool call.
+Reproducible local web-search and browser automation stack for AI agents.
 
----
+## Components
 
-## Part 1 — Research Review
+- SearXNG — privacy-respecting metasearch
+- Crawl4AI — authenticated local web crawling/extraction API
+- agent-browser — browser automation CLI
+- Chrome for Testing — browser runtime managed by agent-browser
+- `web-stack` — lifecycle/status/verification CLI
+- `web-search` — compact SearXNG CLI wrapper
+- shared Docker network for service-to-service communication
 
-### The chosen stack (5 moving parts, 2 of which you already have running)
+The project is designed for two purposes:
 
-| Layer | Tool | License | Why |
-|---|---|---|---|
-| Search | **SearXNG** (already running) | AGPL-3.0 | Your existing meta-search — no change needed |
-| Interactive browsing / forms / login flows (default engine) | **agent-browser** (Vercel Labs) + **Lightpanda** engine | Apache-2.0 (agent-browser) / AGPL-3.0 (Lightpanda) | Purpose-built for AI agents: accessibility-tree snapshots instead of raw HTML, ~88-95% fewer tokens than Playwright MCP when run in interactive (`-i`) mode, native CLI + native MCP server |
-| Interactive browsing fallback (stealth-capable) | **agent-browser** pointed at self-hosted **Steel.dev** browser | Apache-2.0 (agent-browser) / AGPL-3.0 (Steel) | Replaces bare Chrome-for-Testing. Same Docker footprint, but ships anti-detection plugins + session/cookie persistence + debugging UI out of the box |
-| Research / bulk fetch / clean markdown / progressive anti-bot | **Crawl4AI** (docker) | Apache-2.0 | LLM-ready markdown output, built-in 3-tier bot-detection escalation, self-hosted for free |
-| Vision (only when needed) | Screenshot from either browsing tool above | — | Not a new service — a capability you already have |
+1. recover a working web stack after a system rebuild;
+2. provide a repeatable deployment that can be shared with another Linux user.
 
-### Why not the obvious defaults
+## Current baseline
 
-- **Not `browser-use`** — drives a full Chromium session per task, LLM decides every step. ~112k stars but heavy. Independent r/devops reports confirm it underperforms for many users. Fallback only, not daily driver on 16GB RAM.
-- **Not full self-hosted Firecrawl** — needs Redis, RabbitMQ, Postgres, a Playwright microservice, recommends 8-12GB RAM. Crawl4AI does the same job in one container, ~300MB-1GB idle. A Reddit n8n user independently confirmed Crawl4AI beat self-hosted Firecrawl on flaky doc sites.
-- **Not Camoufox/nodriver/Patchright as a default service** — Crawl4AI's built-in UndetectedAdapter covers second-attempt escalation. Independent comparisons rate Crawl4AI's native stealth low (star) vs Camoufox (5 stars) — which is why Camoufox stays a documented escape hatch, not an always-on fourth service.
-- **Not bare Chrome-for-Testing as fallback anymore** — zero anti-detection. Independent reviews (dev.to, third-party vendor-review sites) confirm Steel.dev self-hosted gives anti-detection plugins, session persistence, and a debug UI for the same Docker cost as raw Chrome.
+The initial baseline was validated on:
 
-### How the pieces divide the work
+- CachyOS Linux
+- x86_64
+- Docker 29.x / Compose 5.x
+- Crawl4AI 0.9.3
+- agent-browser 0.37.1
+- Chrome for Testing 153.x
 
-- **agent-browser + Lightpanda (default)** = hands for the common case. Token-efficient ONLY when invoked with `-i` (interactive-elements-only) flag — independent testing shows savings evaporate, sometimes regress worse than Playwright MCP, without it.
-- **agent-browser + Steel.dev (fallback)** = hands for the hard case — same CLI, pointed at a stealth-capable browser session.
-- **Crawl4AI** = the reader — URL to clean markdown, with automatic escalation.
-- **SearXNG** = the index — question to ranked URL list.
+Exact image/package pins live in `versions/pins.env`.
 
-### Honest resource budget (16GB RAM, Ryzen 7840U)
+## Security model
 
-| Component | Idle | Active |
-|---|---|---|
-| SearXNG | ~150-300MB | same |
-| Crawl4AI container (shm_size 2g) | ~300MB-1GB | ~500MB-1.5GB per concurrent crawl |
-| agent-browser + Lightpanda session | near 0 | ~60-150MB per session |
-| agent-browser + Steel.dev fallback | ~300-500MB idle | ~250-800MB per session |
+The default deployment binds SearXNG and Crawl4AI to `127.0.0.1` on the host. Crawl4AI API authentication is enabled. Secrets are generated locally and never committed.
 
-Leave Steel.dev as fallback, not default — Lightpanda's 9-16x lower memory footprint is still the point. Avoid running a big local Ollama model concurrently with a Chrome-engine (Steel) session — that's where 16GB gets tight.
+Do not commit:
 
----
+- `.env`
+- browser authentication/session state
+- encryption keys
+- runtime logs
+- generated caches
+- backup archives containing secrets
 
-## Part 2 — Step-by-Step Implementation
+## Quick install
 
-### Step 0 — Directory layout
+For a supported Linux machine, the bootstrap can install Docker and common system dependencies. Node.js >= 24 is required for agent-browser.
 
-```bash
-mkdir -p ~/ai-tools/web-stack
-cd ~/ai-tools/web-stack
-```
-
-### Step 1 — Add Crawl4AI and Steel.dev to your existing docker-compose
-
-```yaml
-  crawl4ai:
-    image: unclecode/crawl4ai:latest
-    container_name: crawl4ai
-    restart: unless-stopped
-    shm_size: 2g
-    ports:
-      - "11235:11235"
-    environment:
-      - MAX_CONCURRENT_TASKS=4
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  steel-browser:
-    image: ghcr.io/steel-dev/steel-browser:latest
-    container_name: steel-browser
-    restart: unless-stopped
-    shm_size: 2g
-    ports:
-      - "3000:3000"
-      - "3001:3001"
-    environment:
-      - HOST=0.0.0.0
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-```
+Supported primary path:
 
 ```bash
-cd ~/ai-tools
-docker compose up -d crawl4ai steel-browser
-docker compose ps
-curl http://localhost:11235/health
-curl http://localhost:3000/health
+git clone https://github.com/Tariq-Anjum/ai-web-agent-stack.git
+cd ai-web-agent-stack
+./scripts/bootstrap.sh
 ```
 
-### Step 2 — Install Lightpanda
+For a machine that already has the prerequisites:
 
 ```bash
-yay -S lightpanda-nightly-bin
-# or: curl -fsSL https://pkg.lightpanda.io/install.sh | bash
-lightpanda --help
+./scripts/install.sh
 ```
 
-### Step 3 — Install agent-browser
+Then:
 
 ```bash
-npm install -g agent-browser
-agent-browser install
-agent-browser doctor
-mkdir -p ~/.config/agent-browser
-cat > ~/.config/agent-browser/agent-browser.json << 'EOF'
-{
-  "engine": "lightpanda"
-}
-EOF
+./scripts/verify.sh
 ```
 
-Always use `-i`:
+The installer creates the runtime `.env`, directories, Docker network, containers, and agent-browser browser runtime.
+
+## Common commands
+
+After installation:
 
 ```bash
-agent-browser open https://example.com
-agent-browser snapshot -i
-agent-browser close
+web-stack status
+web-stack verify
+web-stack logs
+web-search "Crawl4AI documentation"
 ```
 
-Steel.dev fallback:
+The commands work from the repository itself too:
 
 ```bash
-agent-browser open https://example.com --engine cdp --cdp-url http://localhost:3000
+./bin/web-stack status
+./bin/web-search "Hermes AIOS"
 ```
 
-(Confirm the exact CDP flag against `agent-browser --help` for your installed version.)
+## Default endpoints
 
-### Step 4 — 3-tier fetch/escalate wrapper for Crawl4AI
+Host-local:
 
-See `web_fetch.sh` in this repo. Tier1 plain -> Tier2 stealth -> Tier3 undetected adapter. If Tier3 also blocked, route through Steel.dev fallback instead of retrying Crawl4AI.
+- SearXNG: `http://127.0.0.1:8080`
+- Crawl4AI: `http://127.0.0.1:11235`
 
-### Step 5 — One-command launcher
+Docker network:
 
-See `start-web-stack.sh` in this repo.
+- SearXNG: `http://searxng:8080`
+- Crawl4AI: `http://crawl4ai:11235`
 
-### Step 6 — Make it globally available
+## Repository layout
 
-Shell-access agents: use `agent-browser`, `web_fetch.sh`, and SearXNG's HTTP API directly (cheapest, no MCP schema overhead).
-
-MCP-only clients: register agent-browser's native MCP server:
-
-```json
-{
-  "mcpServers": {
-    "agent-browser": {
-      "command": "agent-browser",
-      "args": ["mcp", "--tools", "all"]
-    }
-  }
-}
+```text
+ai-web-agent-stack/
+├── README.md
+├── LICENSE
+├── SECURITY.md
+├── CONTRIBUTING.md
+├── CHANGELOG.md
+├── .gitignore
+├── .env.example
+├── compose/
+│   └── docker-compose.yml
+├── config/
+│   └── searxng/
+│       └── settings.yml
+├── versions/
+│   └── pins.env
+├── bin/
+│   ├── web-stack
+│   └── web-search
+├── scripts/
+│   ├── bootstrap.sh
+│   ├── prerequisites.sh
+│   ├── install.sh
+│   ├── verify.sh
+│   ├── doctor.sh
+│   ├── update.sh
+│   ├── uninstall.sh
+│   ├── backup.sh
+│   ├── restore.sh
+│   ├── restore-browser-state.sh
+│   └── migrate-existing.sh
+├── browser/
+│   └── install-agent-browser.sh
+├── tests/
+│   └── smoke.sh
+└── docs/
+    ├── ARCHITECTURE.md
+    ├── INSTALLATION.md
+    ├── CONFIGURATION.md
+    ├── BACKUP-RESTORE.md
+    ├── TROUBLESHOOTING.md
+    ├── UPGRADING.md
+    ├── INTEGRATION.md
+    └── DEVELOPMENT.md
 ```
 
-### Step 7 — Routing logic (see web-tools-index.md for the canonical version)
+## Persistence
 
-1. Search -> SearXNG
-2. Read/research -> web_fetch.sh (Crawl4AI 3-tier escalation; fall through to Steel.dev if Tier3 fails)
-3. Interact -> agent-browser + Lightpanda (`-i` mandatory); fallback to Steel.dev via `--engine cdp`
-4. Vision -> agent-browser screenshot --annotate (last resort)
-5. Complex forms -> agent-browser (step 3), no separate tool
+The stack intentionally separates source from runtime state.
 
----
+Source-controlled:
 
-## Verification checklist
+- Compose
+- SearXNG settings
+- shell scripts
+- version pins
+- documentation
 
-```bash
-curl -s "http://localhost:8080/search?q=test&format=json" | head -c 200
-curl -s http://localhost:11235/health
-curl -s http://localhost:3000/health
-agent-browser open https://example.com && agent-browser snapshot -i && agent-browser close
-agent-browser open https://example.com --engine cdp --cdp-url http://localhost:3000
-~/ai-tools/web-stack/web_fetch.sh "https://example.com" | head -c 200
-agent-browser mcp --tools all &
-```
+Runtime/generated:
 
----
+- `.env`
+- `data/`
+- `logs/`
+- `state/`
+- browser state under `$HOME/.agent-browser`
 
-## If you ever need more (escape hatches, not defaults)
+This makes a Git clone sufficient to rebuild the stack while keeping secrets and mutable state outside Git.
 
-- Site beats Crawl4AI's undetected adapter AND Steel.dev: install Camoufox (Firefox-engine patches, independently rated strongest, but heaviest).
-- Need raw CDP control: `pip install nodriver` (same lineage as Crawl4AI's adapter).
-- Need deterministic, code-owned automation: Playwright directly, or Playwright + Stagehand.
+## Recovery philosophy
 
-None of these are part of the default stack — add only if a real site defeats what's above.
+A fresh system should need only:
 
----
+1. a working Git client;
+2. Docker;
+3. Node.js/npm >= 24 for agent-browser installation;
+4. this repository;
+5. your secret backup, if restoring existing authenticated sessions.
 
-## Sources / evidence used for this revision
+The installer generates new secrets automatically. Existing browser authentication is optional.
 
-- Lightpanda memory/speed claims and beta-stage limitations: independent GitHub issue tracker review and Dispatch AI repo audit.
-- agent-browser token-efficiency figures (88-95% reduction) and the mandatory `-i` flag caveat: independent Reddit testing (crowdtamers.com data) plus a countervailing report of token regression without `-i`.
-- Crawl4AI vs Scrapling vs Camoufox stealth ratings: independent third-party tool-comparison matrices, not vendor-published benchmarks.
-- Steel.dev self-hosted viability vs bare Chrome-for-Testing and vs Browserbase: independent dev.to comparison article and third-party vendor-review site, plus unprompted Reddit (r/LocalLLaMA, r/devops) usage reports.
-- browser-use heaviness: independent r/devops usage report.
-- Self-published/marketing-only numbers (Scrapling's "774x faster" claim, Plasmate's "17.5x token compression," Firecrawl/Bright Data/ZenRows vendor benchmarks) were explicitly excluded per project policy: no self-published benchmark numbers accepted without independent corroboration.
+See:
+
+- `docs/INSTALLATION.md`
+- `docs/BACKUP-RESTORE.md`
+
+## License
+
+MIT. See `LICENSE`.

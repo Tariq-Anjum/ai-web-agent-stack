@@ -1,0 +1,36 @@
+# Secrets
+.env
+.env.*
+!.env.example
+state/*.env
+state/agent-browser-encryption-key.env
+
+# Runtime
+data/*
+logs/*
+state/*
+!state/.gitkeep
+!state/*.txt
+!state/*.json
+
+# Local SearXNG runtime cache
+config/searxng/*.local.*
+config/searxng/data/
+
+# Browser/runtime artifacts
+*.har
+*.png
+*.jpg
+*.jpeg
+*.webm
+*.mp4
+browser-state-*.tar.gz
+
+# Temporary
+*.tmp
+*.swp
+.DS_Store
+
+# Editor
+.vscode/
+.idea/

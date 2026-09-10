@@ -1,0 +1,36 @@
+# AI Web Agent Stack SearXNG configuration.
+# Keep this file source-controlled and keep secrets out of it.
+#
+# SearXNG merges this file over its built-in defaults.
+
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "SearXNG (AI Web Agent Stack)"
+
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json
+
+server:
+  # Overwritten by the container environment:
+  secret_key: "ultrasecretkey"
+  bind_address: "0.0.0.0"
+  limiter: false
+  image_proxy: false
+  public_instance: false
+
+ui:
+  default_theme: simple
+  query_in_title: false
+
+outgoing:
+  request_timeout: 3.0
+  pool_connections: 100
+  enable_http2: true
+
+valkey:
+  url: false
