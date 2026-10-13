@@ -41,7 +41,14 @@ Crawl4AI is deployed with:
 
 Keep the API behind localhost or a protected internal network.
 
-Crawl4AI 0.9.3 is the baseline because it is a security release. Re-pin deliberately when upgrading.
+Crawl4AI 0.9.4 is pinned by immutable digest. This official security release fixes
+robots.txt/link-preview SSRF paths and an untrusted-config boundary bypass.
+Re-pin deliberately and verify the live authenticated OpenAPI when upgrading.
+
+`web-read` contacts only the configured loopback API, keeps its token out of
+curl arguments, and accepts only HTTP(S) target URLs without embedded credentials.
+The server's egress policy remains enabled. Content validation is a bounded
+heuristic, not an anti-bot bypass or a guarantee that every page is readable.
 
 ## Browser authentication
 

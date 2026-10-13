@@ -3,7 +3,11 @@
 Run:
 
 ```bash
+./tests/content-validator.sh  # local, no service/LLM required
+./tests/web-read.sh           # local temporary mock HTTP server, always closed
+./tests/pin-sync.sh           # atomic/idempotent pin and settings preservation
 ./scripts/doctor.sh
+./scripts/verify.sh           # real services + browser
 ./tests/smoke.sh
 ```
 
@@ -13,7 +17,16 @@ Shell scripts should pass:
 bash -n path/to/script.sh
 ```
 
-Keep generated state out of Git.
+Run `shellcheck` on modified shell scripts when available; it is not a production
+dependency. Node helpers/tests use only built-in modules.
+
+Keep generated state out of Git. All `state/` content except `.gitkeep`, including
+JSON/session files and screenshots, is ignored.
+
+The live gate requires useful search results, authenticated OpenAPI, rejected
+unauthenticated access, substantive real fit/BM25 content, matching running image
+pins and an agent-browser open/full-and-interactive-snapshot/title/URL/PNG/close
+cycle. Browser smoke uses a dedicated session and an EXIT cleanup trap.
 
 When changing infrastructure:
 

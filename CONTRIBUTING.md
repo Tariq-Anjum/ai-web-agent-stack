@@ -5,6 +5,8 @@ Keep the project reproducible.
 Before changing deployment behavior:
 
 ```bash
+./tests/content-validator.sh
+./tests/web-read.sh
 ./scripts/doctor.sh
 ./scripts/verify.sh
 ./tests/smoke.sh

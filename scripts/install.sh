@@ -4,7 +4,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
-export WEB_STACK_HOME="${WEB_STACK_HOME:-$ROOT}"
+export WEB_STACK_HOME="$ROOT"
 export PATH="$WEB_STACK_HOME/bin:$HOME/.local/bin:$PATH"
 
 mkdir -p \
@@ -42,6 +42,7 @@ node_major="$(node -p 'process.versions.node.split(".")[0]')"
 }
 
 set -a
+# shellcheck source=/dev/null
 source "$ROOT/versions/pins.env"
 set +a
 
@@ -54,32 +55,42 @@ if [[ ! -f "$ROOT/.env" ]]; then
   SEARXNG_SECRET="$(openssl rand -hex 32)"
 
   cat > "$ROOT/.env" <<EOF
-SEARXNG_PORT=8080
+SEARXNG_PORT=${SEARXNG_PORT:-8080}
 SEARXNG_HOST=127.0.0.1
 SEARXNG_VERSION=$SEARXNG_VERSION
-CRAWL4AI_PORT=11235
-CRAWL4AI_CONCURRENCY=2
+CRAWL4AI_PORT=${CRAWL4AI_PORT:-11235}
+CRAWL4AI_CONCURRENCY=${CRAWL4AI_CONCURRENCY:-2}
 CRAWL4AI_API_TOKEN=$CRAWL4AI_API_TOKEN
 SECRET_KEY=$SECRET_KEY
 REDIS_PASSWORD=$REDIS_PASSWORD
 SEARXNG_SECRET=$SEARXNG_SECRET
 CRAWL4AI_IMAGE=$CRAWL4AI_IMAGE
+COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-ai-web-agent-stack}
+SEARXNG_CONTAINER_NAME=${SEARXNG_CONTAINER_NAME:-searxng}
+CRAWL4AI_CONTAINER_NAME=${CRAWL4AI_CONTAINER_NAME:-crawl4ai}
+WEB_STACK_NETWORK=${WEB_STACK_NETWORK:-web-stack}
 EOF
 
   chmod 600 "$ROOT/.env"
 else
   chmod 600 "$ROOT/.env"
-  set -a
-  source "$ROOT/.env"
-  set +a
 fi
 
+"$ROOT/scripts/sync-pins.sh"
+set -a
+# shellcheck source=/dev/null
+source "$ROOT/.env"
+# Canonical pins win even if an old runtime file contains a package override.
+# shellcheck source=/dev/null
+source "$ROOT/versions/pins.env"
+set +a
+
 # Keep package-installed agent-browser user-local.
-npm config set prefix "$HOME/.local"
+# Explicit prefix avoids changing the user's persistent npm configuration.
 
 installed_version="$(agent-browser --version 2>/dev/null | awk '{print $2}' || true)"
 if [[ "$installed_version" != "$AGENT_BROWSER_VERSION" ]]; then
-  npm install --global --allow-scripts=agent-browser \
+  npm install --prefix "$HOME/.local" --global --allow-scripts=agent-browser \
     "agent-browser@$AGENT_BROWSER_VERSION"
 fi
 
@@ -97,21 +108,22 @@ chmod 600 "$KEY_FILE"
 # Install convenience symlinks.
 ln -sfn "$ROOT/bin/web-stack" "$HOME/.local/bin/web-stack"
 ln -sfn "$ROOT/bin/web-search" "$HOME/.local/bin/web-search"
+ln -sfn "$ROOT/bin/web-read" "$HOME/.local/bin/web-read"
 
 # Ensure the key is exported for this process and descendants.
+# shellcheck source=/dev/null
 source "$KEY_FILE"
+
+# Reject invalid configuration before pulling/starting any service.
+"$ROOT/scripts/doctor.sh"
 
 docker compose \
   --env-file "$ROOT/.env" \
   -f "$ROOT/compose/docker-compose.yml" \
   pull
 
-docker compose \
-  --env-file "$ROOT/.env" \
-  -f "$ROOT/compose/docker-compose.yml" \
-  up -d
-
-"$ROOT/bin/web-stack" verify
+"$ROOT/bin/web-stack" up
+"$ROOT/scripts/verify.sh"
 
 cat <<EOF
 
@@ -124,6 +136,8 @@ Commands:
   web-stack status
   web-stack verify
   web-search "Crawl4AI documentation"
+  web-read https://example.com
+  web-read --query "example domain" https://example.com
 
 SearXNG:
   http://127.0.0.1:${SEARXNG_PORT:-8080}

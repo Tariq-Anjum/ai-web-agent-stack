@@ -29,10 +29,17 @@ Verify:
 ## Optional custom location
 
 ```bash
-export WEB_STACK_HOME="/mnt/MD/AI-tools/web-stack"
+export WEB_STACK_HOME="/path/to/ai-web-agent-stack"
 ```
 
-For maximum portability, keeping the repository itself as `WEB_STACK_HOME` is recommended.
+This override applies to the command wrappers. Installation/update/verification
+scripts operate on their own checkout. Global symlinks resolve the checkout
+correctly when no override is set. Add `$HOME/.local/bin` to your PATH.
+The installer exposes `web-stack`, `web-search` and `web-read` there and uses an
+explicit user-local npm prefix without changing persistent npm configuration.
+
+Existing `.env` files keep their secrets, ports and local settings; install/update
+synchronizes only the two image pins from `versions/pins.env`.
 
 ## What the installer generates
 
@@ -63,4 +70,20 @@ A Docker group change may require logging out and back in. The bootstrap intenti
 
 Node.js must be version 24 or newer. The project does not silently install an alternate Node runtime over an existing one.
 
-For this v1.0.0 baseline, x86_64 Linux is the reference platform.
+For v1.1.0, x86_64 Linux is the verified reference platform.
+
+For a parallel test installation, choose unused ports and unique names **before**
+installing (these values are persisted in the generated `.env`):
+
+```bash
+SEARXNG_PORT=18080 CRAWL4AI_PORT=21235 \
+COMPOSE_PROJECT_NAME=ai-web-test \
+SEARXNG_CONTAINER_NAME=ai-web-test-searxng \
+CRAWL4AI_CONTAINER_NAME=ai-web-test-crawl4ai \
+WEB_STACK_NETWORK=ai-web-test-network ./scripts/install.sh
+```
+
+Published ports remain loopback-only. Do not run two installations with the same
+container/network names or ports. Uninstall stops only that Compose project and
+removes only convenience symlinks owned by that checkout; it retains secrets,
+browser installation and data.

@@ -1,0 +1,138 @@
+[
+  {
+    "name": "substantive",
+    "pass": true,
+    "response": {
+      "success": true,
+      "markdown": "# Example Domain\nThis domain is for use in documentation examples without needing permission. You may use this domain in literature without prior coordination or asking for permission.\n"
+    }
+  },
+  {
+    "name": "article-mentioning-challenges",
+    "pass": true,
+    "response": {
+      "success": true,
+      "markdown": "# Browser security research\nA legitimate article explains why some services use CAPTCHA to limit automated abuse. Researchers discuss Access Denied responses and the phrase verify you are human in ordinary explanatory prose."
+    }
+  },
+  {
+    "name": "compact-substantive",
+    "pass": true,
+    "response": {
+      "success": true,
+      "markdown": "This domain is for use in documentation examples without needing permission. Avoid using this example as a production monitoring service."
+    }
+  },
+  {
+    "name": "empty",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": " \n"
+    }
+  },
+  {
+    "name": "tiny",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": "# Welcome\nHello!"
+    }
+  },
+  {
+    "name": "link-only",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": "[More](https://example.com/very-long-link-with-little-visible-content-to-read-and-no-substantive-page-text)"
+    }
+  },
+  {
+    "name": "cloudflare",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": "# Just a moment...\nEnable JavaScript and cookies to continue. Cloudflare is checking the security of your connection before allowing you to access this site."
+    }
+  },
+  {
+    "name": "attention-required",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": "# Attention Required!\nPlease complete the security challenge before continuing to the website. This automatic process protects our service from unwanted automated requests."
+    }
+  },
+  {
+    "name": "human",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": "# Verify you are human\nBefore continuing please confirm that you are a real person. This security verification helps protect our website from unwanted automated requests."
+    }
+  },
+  {
+    "name": "denied",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": "# Access Denied\nYou do not have permission to access this resource. Contact the site administrator if you believe that this restriction was applied incorrectly to your request."
+    }
+  },
+  {
+    "name": "captcha",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": "Complete the CAPTCHA\nBefore continuing please complete this verification process to demonstrate that you are a real person and not an automated browser making unwanted requests."
+    }
+  },
+  {
+    "name": "cf-marker",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": "# Security check\ncf-browser-verification\nBefore accessing our website, you must complete the verification process. This helps us prevent automated access and malicious requests."
+    }
+  },
+  {
+    "name": "unsuccessful",
+    "pass": false,
+    "response": {
+      "success": false,
+      "markdown": "# Example Domain\nThis domain is for use in documentation examples without needing permission. You may use this domain in literature without prior coordination or asking for permission.\n"
+    }
+  },
+  {
+    "name": "missing-success",
+    "pass": false,
+    "response": {
+      "markdown": "# Example Domain\nThis domain is for use in documentation examples without needing permission. You may use this domain in literature without prior coordination or asking for permission.\n"
+    }
+  },
+  {
+    "name": "malformed-markdown",
+    "pass": false,
+    "response": {
+      "success": true,
+      "markdown": {
+        "raw_markdown": "# Example Domain\nThis domain is for use in documentation examples without needing permission. You may use this domain in literature without prior coordination or asking for permission.\n"
+      }
+    }
+  },
+  {
+    "name": "null-response",
+    "pass": false,
+    "response": null
+  },
+  {
+    "name": "array-response",
+    "pass": false,
+    "response": [
+      {
+        "success": true,
+        "markdown": "# Example Domain\nThis domain is for use in documentation examples without needing permission. You may use this domain in literature without prior coordination or asking for permission.\n"
+      }
+    ]
+  }
+]

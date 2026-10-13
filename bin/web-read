@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: web-read [OPTIONS] URL
+
+Read an absolute HTTP(S) URL through the authenticated local Crawl4AI API.
+Successful stdout is validated fit Markdown; diagnostics go to stderr.
+
+Options:
+  -q, --query TEXT   Use query-focused BM25 filtering instead of pruning
+  -h, --help         Show help
+  --                End options
+
+Environment:
+  WEB_STACK_HOME    Stack checkout (default: resolved command location)
+  WEB_READ_TIMEOUT  Request timeout in seconds (default: 90, maximum: 300)
+
+Exit status: 0 accepted content; 1 request/content failure; 2 usage error.
+USAGE
+}
+
+query=""
+urls=()
+while (($#)); do
+  case "$1" in
+    -q|--query)
+      [[ $# -ge 2 && -n "${2//[[:space:]]/}" ]] || {
+        echo 'web-read: query requires non-empty text' >&2; exit 2;
+      }
+      query="$2"
+      shift 2
+      ;;
+    -h|--help) usage; exit 0 ;;
+    --) shift; urls+=("$@"); break ;;
+    -*) echo 'web-read: unknown option (see --help)' >&2; exit 2 ;;
+    *) urls+=("$1"); shift ;;
+  esac
+done
+[[ ${#urls[@]} == 1 ]] || { usage >&2; exit 2; }
+# Validate the URL without ever evaluating URL/query text as shell or code.
+node -e '
+  try {
+    const u = new URL(process.argv[1]);
+    if (!["http:", "https:"].includes(u.protocol) || !u.hostname || u.username || u.password)
+      process.exit(2);
+  } catch { process.exit(2); }
+' "${urls[0]}" || { echo 'web-read: expected an HTTP(S) URL without credentials' >&2; exit 2; }
+
+ROOT="${WEB_STACK_HOME:-$(dirname -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")")}"
+[[ -f "$ROOT/.env" ]] || { echo 'web-read: run scripts/install.sh first' >&2; exit 1; }
+[[ "$(stat -c '%a' "$ROOT/.env")" == 600 ]] || {
+  echo 'web-read: .env must have mode 600' >&2; exit 1;
+}
+# shellcheck source=/dev/null
+source "$ROOT/.env"
+[[ -n "${CRAWL4AI_API_TOKEN:-}" ]] || { echo 'web-read: missing API token' >&2; exit 1; }
+port="${CRAWL4AI_PORT:-11235}"
+[[ "$port" =~ ^[0-9]{1,5}$ ]] && ((10#$port > 0 && 10#$port <= 65535)) || {
+  echo 'web-read: invalid local Crawl4AI port' >&2; exit 1;
+}
+timeout="${WEB_READ_TIMEOUT:-90}"
+[[ "$timeout" =~ ^[1-9][0-9]{0,2}$ ]] && ((timeout <= 300)) || {
+  echo 'web-read: timeout must be 1..300 seconds' >&2; exit 2;
+}
+filter=fit
+[[ -z "$query" ]] || filter=bm25
+# Contract verified against the authenticated OpenAPI of Crawl4AI 0.9.4:
+# MarkdownRequest uses url/f/q/c, not historical example request fields.
+payload="$(jq -cn --arg url "${urls[0]}" --arg f "$filter" --arg q "$query" \
+  '{url: $url, f: $f, q: $q, c: "0"}')"
+
+# Keep the token out of process arguments; no redirects to another API host.
+# Complete transport first, so even a late transfer failure emits no content.
+if ! response="$(printf 'Authorization: Bearer %s\n' "$CRAWL4AI_API_TOKEN" |
+  curl -fsS --connect-timeout 10 --max-time "$timeout" --max-filesize 16777216 \
+    -H @- -H 'Content-Type: application/json' --data "$payload" \
+    "http://127.0.0.1:$port/md")"; then
+  echo 'web-read: API request failed' >&2
+  exit 1
+fi
+# The shared helper validates the entire envelope before emitting Markdown.
+printf '%s' "$response" | node "$ROOT/scripts/read-content.cjs"

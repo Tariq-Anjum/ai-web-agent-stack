@@ -2,10 +2,6 @@
 set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-export WEB_STACK_HOME="$ROOT"
-export PATH="$ROOT/bin:$HOME/.local/bin:$PATH"
-
-"$ROOT/scripts/doctor.sh"
-"$ROOT/bin/web-stack" verify
-
+# One complete gate, including real services and browser (not merely mocks).
+"$ROOT/scripts/verify.sh"
 echo "Smoke test: PASS"

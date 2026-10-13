@@ -8,7 +8,13 @@ docker compose \
   -f "$ROOT/compose/docker-compose.yml" \
   down
 
-rm -f "$HOME/.local/bin/web-stack" "$HOME/.local/bin/web-search"
+# Do not remove a command owned by another checkout.
+for command_name in web-stack web-search web-read; do
+  link="$HOME/.local/bin/$command_name"
+  if [[ -L "$link" && "$(readlink -f -- "$link")" == "$ROOT/bin/$command_name" ]]; then
+    rm -- "$link"
+  fi
+done
 
 echo "Containers stopped and convenience symlinks removed."
 echo "Repository files and secrets were not deleted."

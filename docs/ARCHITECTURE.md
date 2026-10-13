@@ -13,7 +13,7 @@
                            +------------------+
                                               |
                                               v
-                                      Crawl4AI API
+                                web-read → Crawl4AI API
                                               |
                                       browser/extraction
                                               |
@@ -44,7 +44,10 @@ searxng:8080
 
 ### Crawl4AI
 
-Authenticated extraction/crawling service.
+Authenticated extraction/crawling service. `web-read` calls its `/md` endpoint
+and passes the response through one small Node-based content validator. Ordinary
+reads use `PruningContentFilterLXML` fit Markdown; query reads use BM25. These are
+on-demand commands using existing Node/curl/jq dependencies, not new services.
 
 Host endpoint:
 
@@ -74,7 +77,18 @@ into one process.
 
 Both containers share the `web-stack` Docker network.
 
-Host-exposed ports are loopback-only by default.
+Host-exposed ports are loopback-only. Optional project/container/network name
+and port settings allow isolated test deployments without changing the defaults.
+Compose creates/manages the shared network.
+
+## Intentional deferrals
+
+No new idle daemon, database, cache, MCP server, or cloud dependency is added.
+A browserless `curl_cffi + Trafilatura/selectolax` pilot is deferred until measured
+Crawl4AI bottlenecks justify it. Lightpanda is a potential optional future engine,
+not the default. Steel/Camoufox/Patchright remain specialist future pilots only
+after measured legitimate site failures. Valkey, extra Redis, SQLite caching,
+FastMCP, Docling, PyMuPDF4LLM and site-specific interceptors are not v1.1 scope.
 
 ## Persistence
 

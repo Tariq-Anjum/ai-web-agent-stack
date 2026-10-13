@@ -69,4 +69,10 @@ The browser state must be paired with the encryption key used to create it.
 5. Restore `state/agent-browser-encryption-key.env` if restoring encrypted browser state.
 6. Run `./scripts/restore.sh` for runtime/config data.
 7. Run `./scripts/restore-browser-state.sh` for browser sessions.
-8. Run `./scripts/verify.sh`.
+8. Ensure restored `.env` and browser key files have mode `600`.
+9. Run `./scripts/update.sh` to synchronize canonical image/package pins without
+   replacing restored secrets, reinstall command symlinks and run complete verification.
+
+`web-read` has no persistent state or additional backup requirement. Do not
+restore obsolete image pins as the active version merely because they were
+present in a secrets backup.

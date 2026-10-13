@@ -10,12 +10,14 @@ data/*
 logs/*
 state/*
 !state/.gitkeep
-!state/*.txt
-!state/*.json
 
 # Local SearXNG runtime cache
 config/searxng/*.local.*
 config/searxng/data/
+
+# Backup archives (may contain secrets)
+backups/
+*.tar.gz
 
 # Browser/runtime artifacts
 *.har

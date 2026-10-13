@@ -3,6 +3,7 @@ set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 set -a
+# shellcheck source=/dev/null
 source "$ROOT/versions/pins.env"
 set +a
 
@@ -16,8 +17,8 @@ node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)
   exit 1
 }
 
-npm config set prefix "$HOME/.local"
-npm install --global --allow-scripts=agent-browser \
+export PATH="$HOME/.local/bin:$PATH"
+npm install --prefix "$HOME/.local" --global --allow-scripts=agent-browser \
   "agent-browser@$AGENT_BROWSER_VERSION"
 
 agent-browser install

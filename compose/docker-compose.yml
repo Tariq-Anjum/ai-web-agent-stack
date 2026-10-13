@@ -1,9 +1,9 @@
-name: ai-web-agent-stack
+name: "${COMPOSE_PROJECT_NAME:-ai-web-agent-stack}"
 
 services:
   searxng:
     image: "docker.io/searxng/searxng:${SEARXNG_VERSION:?Set SEARXNG_VERSION}"
-    container_name: searxng
+    container_name: "${SEARXNG_CONTAINER_NAME:-searxng}"
     restart: unless-stopped
     init: true
     environment:
@@ -22,7 +22,7 @@ services:
 
   crawl4ai:
     image: "${CRAWL4AI_IMAGE:?Set CRAWL4AI_IMAGE}"
-    container_name: crawl4ai
+    container_name: "${CRAWL4AI_CONTAINER_NAME:-crawl4ai}"
     restart: unless-stopped
     init: true
     shm_size: "1gb"
@@ -39,4 +39,4 @@ services:
 
 networks:
   web-stack:
-    name: web-stack
+    name: "${WEB_STACK_NETWORK:-web-stack}"

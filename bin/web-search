@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-SEARXNG_URL="${SEARXNG_URL:-http://127.0.0.1:8080}"
+ROOT="${WEB_STACK_HOME:-$(dirname -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")")}"
+if [[ -f "$ROOT/.env" ]]; then
+  # shellcheck source=/dev/null
+  source "$ROOT/.env"
+fi
+SEARXNG_URL="${SEARXNG_URL:-http://127.0.0.1:${SEARXNG_PORT:-8080}}"
 SEARXNG_URL="${SEARXNG_URL%/}"
 
 limit="${WEB_SEARCH_LIMIT:-5}"

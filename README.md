@@ -1,4 +1,4 @@
-# AI Web Agent Stack
+# AI Web Agent Stack v1.1.0
 
 Reproducible local web-search and browser automation stack for AI agents.
 
@@ -10,6 +10,7 @@ Reproducible local web-search and browser automation stack for AI agents.
 - Chrome for Testing — browser runtime managed by agent-browser
 - `web-stack` — lifecycle/status/verification CLI
 - `web-search` — compact SearXNG CLI wrapper
+- `web-read` — validated fit/BM25 Markdown through the local Crawl4AI API
 - shared Docker network for service-to-service communication
 
 The project is designed for two purposes:
@@ -19,14 +20,14 @@ The project is designed for two purposes:
 
 ## Current baseline
 
-The initial baseline was validated on:
+v1.1.0 was validated on:
 
 - CachyOS Linux
 - x86_64
 - Docker 29.x / Compose 5.x
-- Crawl4AI 0.9.3
-- agent-browser 0.37.1
-- Chrome for Testing 153.x
+- Crawl4AI 0.9.4 (immutable Docker digest)
+- agent-browser 0.39.0 (exact npm version)
+- Chrome for Testing 155.0.8059.39 (managed by agent-browser)
 
 Exact image/package pins live in `versions/pins.env`.
 
@@ -78,6 +79,8 @@ web-stack status
 web-stack verify
 web-stack logs
 web-search "Crawl4AI documentation"
+web-read https://example.com
+web-read --query "example domain" https://example.com
 ```
 
 The commands work from the repository itself too:
@@ -85,7 +88,26 @@ The commands work from the repository itself too:
 ```bash
 ./bin/web-stack status
 ./bin/web-search "Hermes AIOS"
+./bin/web-read --help
 ```
+
+## Reading and interaction
+
+`web-read URL` returns deterministic pruned Markdown; `-q`/`--query` selects
+query-focused BM25. No LLM is used. HTTP/crawl failures, empty/trivial content,
+and recognized challenge/access-denied pages return non-zero with diagnostics
+on stderr. It does not fall back silently to raw content.
+
+For interaction, prefer `agent-browser snapshot -i -c`. For reading, broad
+inspection or debugging, use normal/full snapshots as appropriate; `-i` is not
+mandatory. See `docs/INTEGRATION.md` and `docs/WEB-READ.md`.
+
+`./scripts/verify.sh` and `./tests/smoke.sh` include fixture/CLI tests, real
+Crawl4AI fit/BM25 extraction, authenticated OpenAPI and authentication rejection,
+search over host/Docker networking, and a browser/screenshot/close cycle.
+External smoke checks require Internet access.
+
+No always-running service or production dependency was added in v1.1.
 
 ## Default endpoints
 
@@ -119,7 +141,8 @@ ai-web-agent-stack/
 │   └── pins.env
 ├── bin/
 │   ├── web-stack
-│   └── web-search
+│   ├── web-search
+│   └── web-read
 ├── scripts/
 │   ├── bootstrap.sh
 │   ├── prerequisites.sh
@@ -135,7 +158,10 @@ ai-web-agent-stack/
 ├── browser/
 │   └── install-agent-browser.sh
 ├── tests/
-│   └── smoke.sh
+│   ├── smoke.sh
+│   ├── content-validator.sh
+│   ├── web-read.sh
+│   └── fixtures/
 └── docs/
     ├── ARCHITECTURE.md
     ├── INSTALLATION.md

@@ -25,7 +25,7 @@ Update `CRAWL4AI_IMAGE` to the desired image digest.
 Validate:
 
 ```bash
-docker compose config -q
+docker compose --env-file .env -f compose/docker-compose.yml config -q
 ./scripts/verify.sh
 ```
 
@@ -42,6 +42,20 @@ Then:
 ```bash
 ./scripts/update.sh
 ```
+
+## v1.1.0 compatibility
+
+Approved pins are Crawl4AI 0.9.4 and agent-browser 0.39.0. Both were tested before
+pin replacement. SearXNG is unchanged. Do not use `latest` or implicitly jump to
+later releases. Review the candidate image's authenticated `/openapi.json` and
+real extraction behavior, not historical request examples.
+
+The updater now synchronizes image pins in existing `.env` files and reuses the
+idempotent installer, including command symlinks and complete verification. It
+preserves secrets and the browser encryption key. Node remains a host prerequisite.
+
+For reversible package evaluation, use an isolated HOME/npm prefix rather than
+replacing a working global installation. See `VERIFICATION-v1.1.0.md`.
 
 ## Release discipline
 

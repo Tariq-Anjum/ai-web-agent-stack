@@ -52,6 +52,15 @@ agent-browser install --with-deps
 
 On Arch/CachyOS, the project does not use apt/dnf/yum, so install missing Chromium libraries with pacman rather than using `--with-deps`.
 
+## web-read rejected a page
+
+Read the concise stderr reason and check the exit status. HTTP/API/crawl failure,
+empty filtered output, insufficient visible substance, or a recognized leading
+challenge/access-denied instruction is a failure even on HTTP 200. BM25 may
+return no relevant content for a query; try a better query or an ordinary read.
+Do not silently substitute rejected content. Use agent-browser inspection only
+when appropriate and authorized; no anti-bot bypass is provided.
+
 ## Docker network issue
 
 ```bash

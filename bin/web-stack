@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")"
 ROOT="${WEB_STACK_HOME:-$(cd -- "$SCRIPT_DIR/.." && pwd)}"
 COMPOSE_FILE="$ROOT/compose/docker-compose.yml"
 ENV_FILE="$ROOT/.env"
-NETWORK="web-stack"
 
 # Optional compatibility: if this repository is used with the historical
 # /mnt/MD path, the caller can export WEB_STACK_HOME explicitly.
@@ -21,27 +20,22 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 set -a
+# shellcheck source=/dev/null
 source "$ENV_FILE"
 set +a
 
 : "${CRAWL4AI_API_TOKEN:?Missing CRAWL4AI_API_TOKEN in $ENV_FILE}"
 CRAWL4AI_PORT="${CRAWL4AI_PORT:-11235}"
 SEARXNG_PORT="${SEARXNG_PORT:-8080}"
+NETWORK="${WEB_STACK_NETWORK:-web-stack}"
 
 dc() {
   docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
 }
 
-ensure_network() {
-  docker network inspect "$NETWORK" >/dev/null 2>&1 ||
-    docker network create "$NETWORK" >/dev/null
-}
-
 crawl4ai_curl() {
-  command curl -fsS \
-    --max-time "${CURL_TIMEOUT:-15}" \
-    -H "Authorization: Bearer ${CRAWL4AI_API_TOKEN}" \
-    "$@"
+  printf 'Authorization: Bearer %s\n' "$CRAWL4AI_API_TOKEN" |
+    command curl -fsS --max-time "${CURL_TIMEOUT:-15}" -H @- "$@"
 }
 
 wait_for_crawl4ai() {
@@ -74,6 +68,18 @@ wait_for_crawl4ai() {
   return 1
 }
 
+wait_for_searxng() {
+  for _ in $(seq 1 60); do
+    if curl -fsS --max-time 3 -o /dev/null "http://127.0.0.1:$SEARXNG_PORT/" 2>/dev/null; then
+      echo 'SearXNG is responding'
+      return 0
+    fi
+    sleep 2
+  done
+  echo 'SearXNG did not become ready in time.' >&2
+  return 1
+}
+
 verify_searxng() {
   curl -fsS \
     --max-time 15 \
@@ -81,22 +87,46 @@ verify_searxng() {
     --data-urlencode 'q=web stack verification' \
     --data-urlencode 'format=json' \
     "http://127.0.0.1:${SEARXNG_PORT}/search" |
-    jq '{
-      query,
-      result_count: (.results | length)
-    }'
+    jq -e 'select(.results | type == "array" and length > 0) |
+      {query, result_count: (.results | length)}'
 }
 
 verify_crawl4ai() {
   crawl4ai_curl \
     "http://127.0.0.1:${CRAWL4AI_PORT}/health" |
-    jq .
+    jq -e '. | select(.status == "ok" and .version == "0.9.4")'
 
   crawl4ai_curl \
     "http://127.0.0.1:${CRAWL4AI_PORT}/openapi.json" |
-    jq -e '.openapi and .paths' >/dev/null
+    jq -e '.openapi and .paths["/md"].post and
+      (.components.schemas.MarkdownRequest.required | index("url")) != null and
+      (.components.schemas.FilterType.enum | index("fit")) != null and
+      (.components.schemas.FilterType.enum | index("bm25")) != null' >/dev/null
 
   echo "Authenticated Crawl4AI OpenAPI: OK"
+
+  local status markdown
+  status="$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+    "http://127.0.0.1:${CRAWL4AI_PORT}/openapi.json")"
+  [[ "$status" == 401 || "$status" == 403 ]] || {
+    echo "FAIL: Crawl4AI permits unauthenticated OpenAPI access" >&2
+    return 1
+  }
+  status="$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' \
+    -H 'Content-Type: application/json' --data '{"url":"https://example.com","f":"fit"}' \
+    "http://127.0.0.1:${CRAWL4AI_PORT}/md")"
+  [[ "$status" == 401 || "$status" == 403 ]] || {
+    echo "FAIL: Crawl4AI permits unauthenticated extraction" >&2
+    return 1
+  }
+  echo "Unauthenticated OpenAPI and extraction rejected: OK"
+
+  markdown="$("$ROOT/bin/web-read" https://example.com)"
+  grep -Fq 'documentation examples' <<<"$markdown"
+  echo "Real Crawl4AI fit extraction + shared validator: OK"
+  markdown="$("$ROOT/bin/web-read" --query "example domain" https://example.com)"
+  grep -Fq 'documentation examples' <<<"$markdown"
+  echo "Real Crawl4AI BM25 extraction + shared validator: OK"
 }
 
 usage() {
@@ -110,7 +140,7 @@ Commands:
   status   Show services, network membership and endpoints
   logs     Follow Crawl4AI logs
   logs-search  Follow SearXNG logs
-  verify   Test SearXNG, Crawl4AI and authenticated API access
+  verify   Test search, auth/OpenAPI, real fit/BM25 reads and Docker networking
 USAGE
 }
 
@@ -118,9 +148,9 @@ command_name="${1:-status}"
 
 case "$command_name" in
   up)
-    ensure_network
     dc up -d
     wait_for_crawl4ai
+    wait_for_searxng
     ;;
 
   down)
@@ -128,13 +158,12 @@ case "$command_name" in
     ;;
 
   restart)
-    ensure_network
     dc restart
     wait_for_crawl4ai
+    wait_for_searxng
     ;;
 
   status)
-    ensure_network
     printf '%s\n' '--- Compose services ---'
     dc ps
 
@@ -170,14 +199,15 @@ case "$command_name" in
     verify_crawl4ai
 
     printf '\n%s\n' '--- Docker-network path ---'
-    docker exec crawl4ai \
+    dc exec -T crawl4ai \
       curl -fsS \
       --max-time 15 \
       --get \
       --data-urlencode 'q=network verification' \
       --data-urlencode 'format=json' \
       'http://searxng:8080/search' |
-      jq '{query, result_count: (.results | length)}'
+      jq -e 'select(.results | type == "array" and length > 0) |
+        {query, result_count: (.results | length)}'
     ;;
 
   -h|--help|help)
