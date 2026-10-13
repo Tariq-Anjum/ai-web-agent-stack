@@ -3,9 +3,14 @@ set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-OUT="${1:-$ROOT/backups/ai-web-agent-stack-$STAMP}"
+OUT="${1:-$ROOT/backups/web-stack-$STAMP}"
 
+umask 077
 mkdir -p "$ROOT/backups"
+# Reusing an older output prefix must not retain world-readable file modes.
+for file in "$OUT-runtime.tar.gz" "$OUT-manifest.txt"; do
+  if [[ -e "$file" ]]; then chmod 600 "$file"; fi
+done
 
 tar -czf "$OUT-runtime.tar.gz" \
   -C "$ROOT" \
@@ -13,12 +18,14 @@ tar -czf "$OUT-runtime.tar.gz" \
   config/searxng
 
 cat > "$OUT-manifest.txt" <<EOF
-AI Web Agent Stack backup
+Web Stack backup
 Created: $(date --iso-8601=seconds)
 
 Included:
 - data/
-- config/searxng/
+- config/searxng/ (including any settings.local.yml)
+
+This archive may contain sensitive local configuration. Keep it private.
 
 Not included:
 - .env

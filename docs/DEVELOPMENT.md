@@ -6,6 +6,7 @@ Run:
 ./tests/content-validator.sh  # local, no service/LLM required
 ./tests/web-read.sh           # local temporary mock HTTP server, always closed
 ./tests/pin-sync.sh           # atomic/idempotent pin and settings preservation
+./tests/bootstrap.sh          # current-checkout default without system mutation
 ./scripts/doctor.sh
 ./scripts/verify.sh           # real services + browser
 ./tests/smoke.sh

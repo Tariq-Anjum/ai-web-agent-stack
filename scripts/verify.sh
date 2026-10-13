@@ -9,6 +9,7 @@ export PATH="$ROOT/bin:$HOME/.local/bin:$PATH"
 "$ROOT/tests/content-validator.sh"
 "$ROOT/tests/web-read.sh"
 "$ROOT/tests/pin-sync.sh"
+"$ROOT/tests/bootstrap.sh"
 set -a
 # shellcheck source=/dev/null
 source "$ROOT/.env"

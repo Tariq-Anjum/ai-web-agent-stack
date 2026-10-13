@@ -14,8 +14,15 @@ This captures:
 
 - SearXNG cache/data
 - SearXNG source-controlled configuration
+- any ignored `config/searxng/settings.local.yml`
 
-It does **not** include secrets.
+It does **not** include `.env` or browser keys/state. A local settings override
+may nevertheless contain credentials, so archives are created with mode `600`
+and must be stored privately. Do not publish them.
+
+One-time canonicalization snapshots under `state/reconciliation/` also contain
+sensitive legacy state. They are ignored, owner-private rollback evidence, not
+another active project or part of the normal source distribution.
 
 ## 2. Secrets backup
 

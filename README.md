@@ -1,4 +1,4 @@
-# AI Web Agent Stack v1.1.0
+# Web Stack v1.1.1
 
 Reproducible local web-search and browser automation stack for AI agents.
 
@@ -20,7 +20,7 @@ The project is designed for two purposes:
 
 ## Current baseline
 
-v1.1.0 was validated on:
+The functional v1.1 baseline was validated on:
 
 - CachyOS Linux
 - x86_64
@@ -30,6 +30,15 @@ v1.1.0 was validated on:
 - Chrome for Testing 155.0.8059.39 (managed by agent-browser)
 
 Exact image/package pins live in `versions/pins.env`.
+
+## Canonical identity
+
+The canonical project is `web-stack`, backed by
+[`Tariq-Anjum/web-stack`](https://github.com/Tariq-Anjum/web-stack). On the owner's
+machine its single working/runtime root is `/mnt/MD/AI-tools/web-stack`.
+The repository was renamed in place; published history and the functional
+`v1.1.0` tag are unchanged. `v1.1.1` is the subsequent canonicalization patch,
+not a reimplementation of v1.1. See `docs/CANONICALIZATION.md`.
 
 ## Security model
 
@@ -51,8 +60,8 @@ For a supported Linux machine, the bootstrap can install Docker and common syste
 Supported primary path:
 
 ```bash
-git clone https://github.com/Tariq-Anjum/ai-web-agent-stack.git
-cd ai-web-agent-stack
+git clone https://github.com/Tariq-Anjum/web-stack.git
+cd web-stack
 ./scripts/bootstrap.sh
 ```
 
@@ -124,7 +133,7 @@ Docker network:
 ## Repository layout
 
 ```text
-ai-web-agent-stack/
+web-stack/
 ├── README.md
 ├── LICENSE
 ├── SECURITY.md
@@ -170,7 +179,9 @@ ai-web-agent-stack/
     ├── TROUBLESHOOTING.md
     ├── UPGRADING.md
     ├── INTEGRATION.md
-    └── DEVELOPMENT.md
+    ├── DEVELOPMENT.md
+    ├── CANONICALIZATION.md
+    └── VERIFICATION-v1.1.1.md
 ```
 
 ## Persistence

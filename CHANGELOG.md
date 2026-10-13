@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.1.1 — 2026-10-14
+
+### Canonicalization patch
+
+- v1.1.0 delivered the functional v1.1 implementation. This patch canonicalizes
+  source/runtime identity as `web-stack`; it does not redo that implementation.
+- Rename the existing GitHub repository from `Tariq-Anjum/ai-web-agent-stack`
+  to `Tariq-Anjum/web-stack`, retaining repository ID, history, branches, tags,
+  default branch and permissions.
+- Establish `/mnt/MD/AI-tools/web-stack` as the single canonical Git/runtime tree;
+  preserve active secrets, browser key/state, unique local assets and prior work
+  in verified private migration snapshots before removing duplicate trees.
+- Canonicalize URLs, default install paths, Compose identity, backup naming,
+  documentation and active workspace/integration references. Bootstrap defaults
+  to the current checkout rather than accidentally creating a second clone.
+- Reconcile both services into canonical Compose. Preserve existing SearXNG local
+  settings/cache and shared-network ownership via explicit optional overrides.
+  Disable the pinned SearXNG entrypoint's recursive host-file ownership changes;
+  protect configuration backups because local overrides can contain credentials.
+- Retain the exact functional pins from v1.1.0 and rerun deterministic/local,
+  real-service, browser, global-command and existing MCP integration checks.
+- No new service/dependency and no measured idle-RAM or performance claim.
+- The published `v1.1.0` ref was **not rewritten**: annotated object
+  `aaa881d257ac56b135de71f7e7cd0f3811ce3c31` still targets
+  `0904d0afa9d3399d72a5f913961b4d11e5acad97`.
+
+See `docs/CANONICALIZATION.md` and `docs/VERIFICATION-v1.1.1.md`.
+
 ## 1.1.0 — 2026-10-14
 
 ### Verified changes

@@ -15,8 +15,8 @@
 ## Fresh install
 
 ```bash
-git clone https://github.com/Tariq-Anjum/ai-web-agent-stack.git
-cd ai-web-agent-stack
+git clone https://github.com/Tariq-Anjum/web-stack.git
+cd web-stack
 ./scripts/install.sh
 ```
 
@@ -29,7 +29,7 @@ Verify:
 ## Optional custom location
 
 ```bash
-export WEB_STACK_HOME="/path/to/ai-web-agent-stack"
+export WEB_STACK_HOME="/path/to/web-stack"
 ```
 
 This override applies to the command wrappers. Installation/update/verification
@@ -66,11 +66,17 @@ The bootstrap path installs Docker and common CLI prerequisites when `pacman` (A
 ./scripts/bootstrap.sh
 ```
 
+Bootstrap defaults to its current checkout, so invoking it from a custom clone
+path does not create a second runtime clone in `$HOME`. An explicit target
+argument can be used when intentionally provisioning a different location.
+
 A Docker group change may require logging out and back in. The bootstrap intentionally stops rather than running the stack through `sudo docker`.
 
 Node.js must be version 24 or newer. The project does not silently install an alternate Node runtime over an existing one.
 
-For v1.1.0, x86_64 Linux is the verified reference platform.
+For v1.1.x, x86_64 Linux is the verified reference platform.
+Existing runtime migrations must preserve their secrets/settings before adopting
+canonical Compose; see `CANONICALIZATION.md`.
 
 For a parallel test installation, choose unused ports and unique names **before**
 installing (these values are persisted in the generated `.env`):

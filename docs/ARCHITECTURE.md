@@ -79,7 +79,9 @@ Both containers share the `web-stack` Docker network.
 
 Host-exposed ports are loopback-only. Optional project/container/network name
 and port settings allow isolated test deployments without changing the defaults.
-Compose creates/manages the shared network.
+Compose creates/manages the shared network for fresh installs. An explicitly
+external pre-existing network can be reused without changing its ownership.
+SearXNG and Crawl4AI belong to the same canonical `web-stack` Compose project.
 
 ## Intentional deferrals
 

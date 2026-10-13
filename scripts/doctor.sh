@@ -53,7 +53,12 @@ if [[ -f "$ROOT/.env" ]]; then
   # shellcheck source=/dev/null
   source "$ROOT/state/agent-browser-encryption-key.env"
   [[ "${AGENT_BROWSER_ENCRYPTION_KEY:-}" =~ ^[a-f0-9]{64}$ ]] || fail "invalid browser encryption key"
-  pass "runtime pins, secrets, browser key and bounded concurrency"
+  settings_file="${SEARXNG_SETTINGS_FILE:-settings.yml}"
+  [[ "$settings_file" =~ ^[A-Za-z0-9._-]+\.yml$ && -r "$ROOT/config/searxng/$settings_file" ]] ||
+    fail "invalid or missing local SearXNG settings file"
+  [[ "${WEB_STACK_NETWORK_EXTERNAL:-false}" == false || "${WEB_STACK_NETWORK_EXTERNAL:-false}" == true ]] ||
+    fail "invalid external network setting"
+  pass "runtime pins, secrets, browser key, bounded concurrency and selected settings"
 
   dc() { docker compose --env-file "$ROOT/.env" -f "$ROOT/compose/docker-compose.yml" "$@"; }
   dc config -q

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/Tariq-Anjum/ai-web-agent-stack.git}"
-TARGET_DIR="${1:-$HOME/ai-web-agent-stack}"
+REPO_URL="${REPO_URL:-https://github.com/Tariq-Anjum/web-stack.git}"
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+TARGET_DIR="${1:-$ROOT}"
 
 command -v git >/dev/null 2>&1 || {
   echo "git is required to bootstrap this repository." >&2

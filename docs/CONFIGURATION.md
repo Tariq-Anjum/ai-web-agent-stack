@@ -30,7 +30,23 @@ COMPOSE_PROJECT_NAME
 SEARXNG_CONTAINER_NAME
 CRAWL4AI_CONTAINER_NAME
 WEB_STACK_NETWORK
+WEB_STACK_NETWORK_EXTERNAL
+SEARXNG_SETTINGS_FILE
 ```
+
+`COMPOSE_PROJECT_NAME` defaults to `web-stack`. Both services are managed by
+canonical Compose. Fresh installs let Compose manage `web-stack` networking.
+For a pre-existing shared network, `WEB_STACK_NETWORK_EXTERNAL=true` preserves
+external ownership and prevents teardown from removing it.
+
+`SEARXNG_SETTINGS_FILE` defaults to source-controlled `settings.yml`. An ignored
+`settings.local.yml` can preserve existing local SearXNG behavior during migration.
+Keep sensitive overrides private and back them up separately from published source.
+The pinned SearXNG image runs as root. `FORCE_OWNERSHIP=false` prevents its
+entrypoint from recursively changing ownership of host source/config/cache files;
+this keeps owner-private local configuration readable to the host backup tooling.
+Startup ownership warnings are expected with user-owned bind mounts and do not
+indicate a failed crawl/search; the functional gate verifies actual operation.
 
 ## Version pinning
 

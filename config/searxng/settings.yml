@@ -1,4 +1,4 @@
-# AI Web Agent Stack SearXNG configuration.
+# Web Stack SearXNG configuration.
 # Keep this file source-controlled and keep secrets out of it.
 #
 # SearXNG merges this file over its built-in defaults.
@@ -7,7 +7,7 @@ use_default_settings: true
 
 general:
   debug: false
-  instance_name: "SearXNG (AI Web Agent Stack)"
+  instance_name: "SearXNG (Web Stack)"
 
 search:
   safe_search: 0

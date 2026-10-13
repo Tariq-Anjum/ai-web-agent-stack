@@ -74,13 +74,12 @@ crawl4ai
 searxng
 ```
 
-Recreate if necessary:
+For a fresh Compose-managed network, start the canonical stack:
 
 ```bash
-docker network rm web-stack 2>/dev/null || true
-docker network create web-stack
-docker compose \
-  --env-file .env \
-  -f compose/docker-compose.yml \
-  up -d
+web-stack up
 ```
+
+If `.env` intentionally selects `WEB_STACK_NETWORK_EXTERNAL=true`, inspect and
+preserve existing members before making network changes. Do not delete a shared
+network merely to remove an ownership warning. See `CANONICALIZATION.md`.

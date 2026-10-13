@@ -1,4 +1,4 @@
-name: "${COMPOSE_PROJECT_NAME:-ai-web-agent-stack}"
+name: "${COMPOSE_PROJECT_NAME:-web-stack}"
 
 services:
   searxng:
@@ -12,6 +12,9 @@ services:
       SEARXNG_SECRET: "${SEARXNG_SECRET:?Set SEARXNG_SECRET}"
       SEARXNG_LIMITER: "false"
       SEARXNG_IMAGE_PROXY: "false"
+      SEARXNG_SETTINGS_PATH: "/etc/searxng/${SEARXNG_SETTINGS_FILE:-settings.yml}"
+      # The pinned image runs as root; do not chown source/private host files.
+      FORCE_OWNERSHIP: "false"
     ports:
       - "127.0.0.1:${SEARXNG_PORT:-8080}:8080"
     volumes:
@@ -40,3 +43,4 @@ services:
 networks:
   web-stack:
     name: "${WEB_STACK_NETWORK:-web-stack}"
+    external: ${WEB_STACK_NETWORK_EXTERNAL:-false}
