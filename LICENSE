@@ -1,21 +1,23 @@
-MIT License
+# Proprietary Source Notice — web-stack
 
-Copyright (c) 2026 Tariq-Anjum
+Copyright © 2026 Tariq Anjum. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Current development
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+As of October 16, 2026, this repository is privately developed. Except for material governed by another license or rights already granted in an earlier release, no additional license is granted to copy, modify, redistribute, sublicense, publish, or commercially exploit the current proprietary development material without the copyright holder's written permission.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Authorized collaborators may access and use this repository only within the permissions and agreements separately granted to them. For collaboration, redistribution, open-source release, or commercial licensing, contact the repository owner.
+
+## Existing licenses and third-party materials
+
+**This notice does not revoke the MIT permissions granted for versions or material previously released under MIT.** Existing recipients may continue to exercise those permissions under their applicable license terms. Historical tagged versions and commits retain their original notices.
+
+This notice also does not override third-party open-source licenses, upstream attribution, dependencies, or other rights. Third-party components remain under their own licenses. In particular, this notice is not a claim of ownership over external works, sample code, or contributions that the maintainer does not have the right to relicense.
+
+This notice applies to new original proprietary development material from the stated date. Where a file combines previously MIT-licensed content with later proprietary changes, the earlier MIT grant continues to apply to the earlier licensed material; the later original changes require separate permission unless explicitly licensed otherwise.
+
+## Disclaimer
+
+The material is provided for development purposes on an "AS IS" basis, without warranties to the extent permitted by law.
+
+For licensing inquiries: https://github.com/Tariq-Anjum
