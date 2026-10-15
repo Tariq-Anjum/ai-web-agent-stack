@@ -225,4 +225,4 @@ See:
 
 ## License
 
-MIT. See `LICENSE`.
+New original development material is proprietary as of October 16, 2026. Earlier MIT-licensed releases retain their permissions; third-party components retain their own licenses. See `LICENSE`.
