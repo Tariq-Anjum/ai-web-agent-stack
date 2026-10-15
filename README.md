@@ -225,4 +225,4 @@ See:
 
 ## License
 
-New original development material is proprietary as of October 16, 2026. Earlier MIT-licensed releases retain their permissions; third-party components retain their own licenses. See `LICENSE`.
+New original development material is proprietary as of October 16, 2026. Earlier MIT-licensed material retains its permissions and [original notice](LICENSE-MIT-HISTORICAL.txt); third-party components retain their own licenses. See [LICENSE](LICENSE). Private repository access is required for the clone instructions above. The repository notice does not relicense SearXNG, Crawl4AI, browser tools, or other upstream components.
